@@ -1,38 +1,89 @@
 # QuantBT
 
-QuantBT is a modular, event-style trading backtesting engine built to look and behave like a serious quant research project rather than a notebook script. It supports multi-asset OHLCV data, realistic execution assumptions, portfolio accounting, train/test validation, in-sample parameter sweeps, out-of-sample robustness checks, benchmark comparison, and automated report generation.
+A professional-grade event-driven backtesting engine for systematic trading research in Python.
 
-## Highlights
+QuantBT is built to look and feel like a serious quant research project rather than a notebook demo. It includes realistic execution modeling, multi-asset portfolio simulation, in-sample and out-of-sample evaluation, walk-forward optimization, Monte Carlo robustness checks, regime segmentation, and a modular architecture that is easy to extend with new strategies and data sources.
 
-- Event-style simulation loop with delayed execution to avoid same-bar fill assumptions
-- Cleanly separated modules for data, strategies, execution, portfolio, metrics, and analysis
-- Realistic market order fills with transaction costs, slippage, spread, and volume caps
-- Three built-in strategies:
-  - Moving average crossover
-  - Mean reversion using rolling z-score
-  - Momentum breakout using lagged breakout bands
-- Built-in train/test split, in-sample grid search, out-of-sample evaluation, and slippage sensitivity checks
-- Walk-forward optimization with stitched out-of-sample equity and parameter tracking
-- Monte Carlo moving-block bootstrap for return-path robustness analysis
-- Regime segmentation using inferred bull/bear and high/low-volatility states
-- Multi-asset allocation constraints including capped single-name weights, idle cash buffers, active-name limits, and inverse-volatility sizing
-- Quant-style metrics including Sharpe, Sortino, Calmar, drawdown, turnover, exposure, win rate, and profit factor
-- Deterministic sample-data generator for reproducible local demos and tests
-- Pytest coverage for signals, costs, execution timing, PnL accounting, and metrics
+## Why This Project Stands Out
 
-## Project Structure
+- Event-driven simulation with delayed execution to avoid naive same-bar fills
+- Explicit guardrails against look-ahead bias
+- Realistic execution costs:
+  commission, slippage, spread, and participation caps
+- Multi-asset portfolio construction with allocation constraints
+- Research workflow with:
+  train/test split, parameter sweep, walk-forward validation, bootstrap robustness, benchmark comparison
+- Quant-style performance analytics:
+  Sharpe, Sortino, Calmar, drawdown, turnover, exposure, trade-level statistics
+- Clean engineering:
+  typed modules, reusable abstractions, deterministic sample data, pytest coverage
+
+## Built-In Strategies
+
+- Moving Average Crossover
+- Mean Reversion using rolling z-score / Bollinger-style logic
+- Momentum Breakout using lagged breakout bands
+
+Each strategy exposes a common `generate_signals(data)` interface, making it straightforward to add more alpha models later.
+
+## Core Features
+
+### Data Layer
+
+- Load OHLCV data from CSV
+- Optionally download data from Yahoo Finance
+- Standardize timestamps and column names
+- Validate sorting, duplicates, and missing values
+- Support multiple assets
+- Resample data into coarser bars if needed
+
+### Execution Layer
+
+- Market-order execution at `next_open` or `next_close`
+- Commission model in basis points plus optional fixed fees
+- Slippage model with volume-share impact
+- Optional spread costs
+- Partial fills under bar-volume participation limits
+- Long-only or long/short portfolio support
+
+### Portfolio Construction
+
+- Equal-weight or inverse-volatility allocation
+- Per-asset weight caps
+- Max active positions constraint
+- Cash reserve buffer
+- Gross leverage control
+
+### Research Workflow
+
+- In-sample parameter sweep
+- Out-of-sample evaluation
+- Buy-and-hold benchmark comparison
+- Cost-free vs cost-aware comparison
+- Walk-forward optimization with stitched out-of-sample equity
+- Monte Carlo moving-block bootstrap on returns
+- Regime segmentation across bull/bear and high/low-volatility environments
+
+## Architecture
 
 ```text
 .
 ├── README.md
 ├── main.py
 ├── pyproject.toml
+├── requirements.txt
 ├── data/
 ├── reports/
 ├── src/
 │   └── quantbt/
 │       ├── analysis/
+│       │   ├── regimes.py
+│       │   ├── reporting.py
+│       │   └── robustness.py
 │       ├── backtester/
+│       │   ├── engine.py
+│       │   ├── sweep.py
+│       │   └── walk_forward.py
 │       ├── data/
 │       ├── execution/
 │       ├── metrics/
@@ -44,36 +95,36 @@ QuantBT is a modular, event-style trading backtesting engine built to look and b
 └── tests/
 ```
 
-## Research Design Choices
+## Quant Design Principles
 
-### No look-ahead bias
+### No Look-Ahead Bias
 
-- Strategy indicators are built from data available at or before each bar.
-- Orders generated from bar `t` signals are filled on bar `t+1` based on configurable `next_open` or `next_close` execution.
-- The breakout strategy uses `shift(1)` breakout bands so the current bar never compares against a level that already includes itself.
+- Indicators use only data available up to the signal bar
+- Orders created from bar `t` are filled on bar `t + 1`
+- Breakout thresholds are shifted so the current bar never sees itself
 
-### Realistic execution assumptions
+### Realistic Simulation
 
-- Commission, slippage, spread, and a volume participation cap are included by default.
-- Orders can be partially filled when requested size exceeds the configured fraction of bar volume.
-- Position sizing allocates gross notional across active signals rather than pretending every signal gets infinite liquidity.
-- Portfolio construction can reserve cash, cap single-name weights, restrict the number of active positions, and switch between equal-weight and inverse-volatility allocation.
+- Transaction costs are included by default
+- Slippage scales with participation
+- Fill sizes are constrained by bar volume
+- Portfolio weights can be capped, throttled, and cash-buffered
 
-### Overfitting control
+### Overfitting Controls
 
-- Parameter selection happens only on the in-sample segment.
-- The selected parameter set is then evaluated out of sample.
-- Reports include slippage sensitivity, comparison with a cost-free run, walk-forward validation, bootstrap robustness statistics, and regime-level performance breakdowns.
+- Parameter selection happens on in-sample data only
+- Final evaluation is done out of sample
+- Walk-forward validation checks stability across rolling windows
+- Bootstrap analysis measures path dependence and tail outcomes
+- Regime segmentation shows where performance is robust and where it is fragile
 
-### Survivorship-bias caveat
+### Survivorship Bias Note
 
-- The engine itself supports any universe supplied to it, including delisted names in CSV form.
-- If you use present-day Yahoo Finance tickers, constituent survivorship is a property of the upstream data source rather than the engine.
-- For interview-grade research, use a historical point-in-time universe and corporate-action-clean data when available.
+The engine can handle any universe supplied to it, including delisted names in CSV form. If you use present-day Yahoo Finance tickers, survivorship bias comes from the upstream dataset, not the backtester. For production-quality research, point-in-time universes and corporate-action-clean data are recommended.
 
 ## Installation
 
-The global Python scientific stack on some systems can be inconsistent, so using a local virtual environment is recommended.
+Using a virtual environment is recommended.
 
 ```bash
 python3 -m venv .venv
@@ -90,24 +141,24 @@ Generate deterministic sample data:
 python main.py generate-sample-data --output-dir data --periods 504 --assets SPY,QQQ,IWM
 ```
 
-Run the research workflow on CSV data:
+Run the default research workflow on local CSV data:
 
 ```bash
 python main.py run --data-dir data --output-dir reports
 ```
 
-Run directly from Yahoo Finance:
+Run directly on Yahoo Finance data:
 
 ```bash
 python main.py run --tickers SPY,QQQ,IWM --start 2018-01-01 --end 2024-12-31 --output-dir reports
 ```
 
-Allow shorting and change execution assumptions:
+Run with richer portfolio construction and research settings:
 
 ```bash
 python main.py run \
   --data-dir data \
-  --allow-short \
+  --strategies moving_average,mean_reversion,breakout \
   --price-source next_open \
   --commission-bps 5 \
   --slippage-bps 3 \
@@ -118,42 +169,114 @@ python main.py run \
   --min-cash-buffer 0.03 \
   --bootstrap-iterations 500 \
   --walk-forward-train-bars 126 \
-  --walk-forward-test-bars 63
+  --walk-forward-test-bars 63 \
+  --walk-forward-step-bars 63 \
+  --regime-lookback 63 \
+  --output-dir reports
 ```
 
-## Output Artifacts
+## CLI Options You’ll Likely Use
 
-For each strategy, QuantBT writes:
+- `--strategies`
+  choose one or more strategies
+- `--price-source`
+  `next_open` or `next_close`
+- `--allow-short`
+  enable long/short simulation
+- `--allocation-scheme`
+  `equal_weight` or `inverse_volatility`
+- `--max-asset-weight`
+  cap single-name concentration
+- `--max-active-positions`
+  limit simultaneous holdings
+- `--bootstrap-iterations`
+  control Monte Carlo robustness depth
+- `--walk-forward-train-bars`, `--walk-forward-test-bars`
+  tune rolling validation windows
+- `--regime-lookback`
+  tune market-state inference horizon
 
-- `reports/<strategy>/in_sample/metrics.csv`
-- `reports/<strategy>/out_of_sample/metrics.csv`
-- `reports/<strategy>/out_of_sample/benchmark_metrics.csv`
-- `reports/<strategy>/out_of_sample/robustness.csv`
-- `reports/<strategy>/out_of_sample/walk_forward_segments.csv`
-- `reports/<strategy>/out_of_sample/walk_forward_metrics.csv`
-- `reports/<strategy>/out_of_sample/bootstrap_stats.csv`
-- `reports/<strategy>/out_of_sample/regime_summary.csv`
-- `reports/<strategy>/out_of_sample/regime_assignments.csv`
-- `reports/<strategy>/summary.txt`
-- Plot images for equity, drawdown, rolling risk, monthly heatmap, parameter sweep, walk-forward equity, bootstrap distributions, and regime performance
+## Example Output Artifacts
+
+For each strategy, QuantBT writes a research bundle under `reports/<strategy>/`.
+
+Typical artifacts include:
+
+- `in_sample/metrics.csv`
+- `in_sample/parameter_sweep.csv`
+- `out_of_sample/metrics.csv`
+- `out_of_sample/benchmark_metrics.csv`
+- `out_of_sample/robustness.csv`
+- `out_of_sample/walk_forward_segments.csv`
+- `out_of_sample/walk_forward_metrics.csv`
+- `out_of_sample/bootstrap_stats.csv`
+- `out_of_sample/regime_summary.csv`
+- `summary.txt`
+
+Plots include:
+
+- Equity curve
+- Drawdown curve
+- Rolling Sharpe / rolling volatility
+- Monthly return heatmap
+- Parameter sweep visualization
+- Walk-forward equity curve
+- Bootstrap distribution plots
+- Regime performance chart
 
 ## Testing
+
+Run the test suite:
 
 ```bash
 pytest
 ```
 
+Current coverage includes:
+
+- Signal generation correctness
+- No future leakage behavior
+- Execution timing
+- Transaction cost and slippage calculations
+- Position and PnL accounting
+- Metric calculations
+- Walk-forward research utilities
+- Allocation constraints
+- Regime segmentation analysis
+
 ## Extending The Engine
 
-To add a new strategy:
+### Add a New Strategy
 
-1. Create a new class in `src/quantbt/strategies/` that inherits from `BaseStrategy`.
-2. Implement `generate_signals(self, market_data)`.
-3. Add a default parameter grid for research sweeps.
-4. Register the strategy in `main.py`.
+1. Create a class in `src/quantbt/strategies/`
+2. Inherit from `BaseStrategy`
+3. Implement `generate_signals(self, market_data)`
+4. Add a default parameter grid
+5. Register it in `main.py`
 
-To plug in a new data source:
+### Add a New Data Source
 
-1. Load the source into a DataFrame with `timestamp`, `open`, `high`, `low`, `close`, and `volume`.
-2. Convert it into the canonical `MarketData` container.
-3. Reuse the same engine, execution, and reporting pipeline unchanged.
+1. Load data into a DataFrame with `timestamp`, `open`, `high`, `low`, `close`, `volume`
+2. Convert it into the canonical `MarketData` container
+3. Reuse the same backtester, execution, metrics, and reporting pipeline
+
+## Interview-Ready Talking Points
+
+This project supports saying, truthfully:
+
+- I built an event-driven backtesting engine in Python
+- I modeled realistic execution costs and slippage
+- I tested multiple systematic strategies
+- I evaluated risk-adjusted performance and trade-level behavior
+- I compared in-sample vs out-of-sample results
+- I ran walk-forward validation and Monte Carlo robustness checks
+- I analyzed performance across different market regimes
+
+## Roadmap Ideas
+
+- Correlation-aware portfolio optimization
+- Regime-aware strategy activation filters
+- Sector or factor exposure constraints
+- Multi-frequency strategies
+- Intraday support
+- Live paper-trading adapter
