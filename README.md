@@ -1,10 +1,10 @@
 # QuantBT
 
-A professional-grade event-driven backtesting engine for systematic trading research in Python.
+An event-driven backtesting engine for systematic trading research in Python.
 
-QuantBT is built to look and feel like a serious quant research project rather than a notebook demo. It includes realistic execution modeling, multi-asset portfolio simulation, in-sample and out-of-sample evaluation, walk-forward optimization, Monte Carlo robustness checks, regime segmentation, and a modular architecture that is easy to extend with new strategies and data sources.
+QuantBT is a modular research backtesting framework focused on realistic execution assumptions, multi-asset portfolio simulation, and reproducible evaluation. It includes in-sample and out-of-sample testing, walk-forward optimization, bootstrap robustness analysis, regime segmentation, and an architecture designed to support additional strategies and data sources.
 
-## Why This Project Stands Out
+## Overview
 
 - Event-driven simulation with delayed execution to avoid naive same-bar fills
 - Explicit guardrails against look-ahead bias
@@ -15,10 +15,9 @@ QuantBT is built to look and feel like a serious quant research project rather t
   train/test split, parameter sweep, walk-forward validation, bootstrap robustness, benchmark comparison
 - Quant-style performance analytics:
   Sharpe, Sortino, Calmar, drawdown, turnover, exposure, trade-level statistics
-- Clean engineering:
-  typed modules, reusable abstractions, deterministic sample data, pytest coverage
+- Typed modules, reusable abstractions, deterministic sample data, and pytest coverage
 
-## Built-In Strategies
+## Strategies
 
 - Moving Average Crossover
 - Mean Reversion using rolling z-score / Bollinger-style logic
@@ -26,7 +25,7 @@ QuantBT is built to look and feel like a serious quant research project rather t
 
 Each strategy exposes a common `generate_signals(data)` interface, making it straightforward to add more alpha models later.
 
-## Core Features
+## Components
 
 ### Data Layer
 
@@ -95,7 +94,7 @@ Each strategy exposes a common `generate_signals(data)` interface, making it str
 └── tests/
 ```
 
-## Quant Design Principles
+## Design Notes
 
 ### No Look-Ahead Bias
 
@@ -103,14 +102,14 @@ Each strategy exposes a common `generate_signals(data)` interface, making it str
 - Orders created from bar `t` are filled on bar `t + 1`
 - Breakout thresholds are shifted so the current bar never sees itself
 
-### Realistic Simulation
+### Execution Assumptions
 
 - Transaction costs are included by default
 - Slippage scales with participation
 - Fill sizes are constrained by bar volume
 - Portfolio weights can be capped, throttled, and cash-buffered
 
-### Overfitting Controls
+### Model Validation
 
 - Parameter selection happens on in-sample data only
 - Final evaluation is done out of sample
@@ -175,7 +174,7 @@ python main.py run \
   --output-dir reports
 ```
 
-## CLI Options You’ll Likely Use
+## Common CLI Options
 
 - `--strategies`
   choose one or more strategies
@@ -196,7 +195,7 @@ python main.py run \
 - `--regime-lookback`
   tune market-state inference horizon
 
-## Example Output Artifacts
+## Output Artifacts
 
 For each strategy, QuantBT writes a research bundle under `reports/<strategy>/`.
 
@@ -259,18 +258,6 @@ Current coverage includes:
 1. Load data into a DataFrame with `timestamp`, `open`, `high`, `low`, `close`, `volume`
 2. Convert it into the canonical `MarketData` container
 3. Reuse the same backtester, execution, metrics, and reporting pipeline
-
-## Interview-Ready Talking Points
-
-This project supports saying, truthfully:
-
-- I built an event-driven backtesting engine in Python
-- I modeled realistic execution costs and slippage
-- I tested multiple systematic strategies
-- I evaluated risk-adjusted performance and trade-level behavior
-- I compared in-sample vs out-of-sample results
-- I ran walk-forward validation and Monte Carlo robustness checks
-- I analyzed performance across different market regimes
 
 ## Roadmap Ideas
 
